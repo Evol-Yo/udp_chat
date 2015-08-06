@@ -25,22 +25,22 @@ SER_BIN=server
 all:$(CLI_BIN) $(SER_BIN)
 
 $(CLI_BIN):$(CLI_OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) -lpthread
 $(SER_BIN):$(SER_OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) -lpthread
 
 %.o:$(COMM_PATH)/%.cpp
-	$(CC) $(CFLAGS) -c $< $(INCLUDE) 
+	$(CC) $(CFLAGS) -c $< $(INCLUDE)  
 %.o:$(DATA_POOL_PATH)/%.cpp
-	$(CC) $(CFLAGS) -c $< $(INCLUDE) 
+	$(CC) $(CFLAGS) -c $< $(INCLUDE)  
 %.o:$(SERVER_PATH)/%.cpp
-	$(CC) $(CFLAGS) -c $< $(INCLUDE) 
+	$(CC) $(CFLAGS) -c $< $(INCLUDE)  
 %.o:$(CLIENT_PATH)/%.cpp
-	$(CC) $(CFLAGS) -c $< $(INCLUDE) 
+	$(CC) $(CFLAGS) -c $< $(INCLUDE)  
 
 
 clean:
-	rm *.o $(CLI_BIN) $(SER_BIN)
+	rm -f *.o $(CLI_BIN) $(SER_BIN)
 
 
 

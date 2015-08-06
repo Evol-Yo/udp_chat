@@ -12,39 +12,22 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include "data_pool.h"
 #include "my_json.h"
 #include "util.h"
 
-#define BUF_SIZE 512
-
-typedef struct client_info {
-	
-	typedef in_addr_t id_type;
-
-	id_type				_id;
-	string 				_name;
-	struct sockaddr_in	_sockaddr;
-	socklen_t			_socklen;
-
-	client_info()
-	{
-		_id = 0;
-		bzero(&_sockaddr, sizeof(_sockaddr));
-		_socklen = 0;
-	}
-
-	static id_type hash(const struct sockaddr_in &sockaddr){
-		return (id_type)sockaddr.sin_addr.s_addr;
-	}
-
-} client_info;
+void *cosumer_run(void *ser);
+void *productor_run(void *ser);
 
 class server {
+	friend void *cosumer_run(void *ser);
+	friend void *productor_run(void *ser);
+
 	public:
 		server()
-			:_sock(0), _port(0), _socklen(0)
+			: _sock(0), _port(0), _socklen(0)
 		{
 			bzero(&_sockaddr, sizeof(_sockaddr));
 		}
@@ -72,8 +55,8 @@ class server {
 		unsigned short 			_port;
 		struct sockaddr_in		_sockaddr;
 		socklen_t				_socklen;
-		client_list_type		_clients_list;
-
+		data_pool				_msg_queue;
+		client_list_type		_online_users;
 };
 
 
@@ -100,22 +83,20 @@ int server::init(const string &ip, unsigned short port)
 int server::run()
 {
 
-	client_info client;
-	string msg;
-	if(recv_msg(msg, client) < 0){
-		log_error("recv_msg error");
+	pthread_t cosumer, productor;
+	if(pthread_create(&productor, NULL, productor_run, this) != 0){
+		log_error("create productor error");
 		return -1;
 	}
-
-	_clients_list[client._id] = client;
-
-	if(broadcast_msg(msg) < 0){
-		log_error("broadcast_msg error");
+	if(pthread_create(&cosumer, NULL, cosumer_run, this) != 0){
+		log_error("create cosumer error");
 		return -2;
 	}
 
-	return 0;
+	pthread_join(productor, NULL);
+	pthread_join(cosumer, NULL);
 
+	return 0;
 }
 
 ssize_t server::recv_msg(string &msg, client_info &cli)
@@ -149,14 +130,55 @@ ssize_t server::send_msg(const string &msg, const client_info &cli)
 
 int server::broadcast_msg(const string &msg)
 {
-	client_list_type::iterator iter = _clients_list.begin();
-	while(iter != _clients_list.end()){
+	client_list_type::iterator iter = _online_users.begin();
+	while(iter != _online_users.end()){
 		ssize_t size = send_msg(msg, iter->second);
 		if(size < 0){
 			//do something
 		}
+		iter++;
 	}
 	return 0;
 }
+
+void *cosumer_run(void *ser)
+{	
+	server *serv = (server*)ser;
+	client_info client;
+	string msg;
+	data_pool::data_type data;
+	while(1){
+		data = serv->_msg_queue.pop();
+		if(serv->broadcast_msg(data.second) < 0){
+			log_error("broadcast_msg error");
+			return (void*)-2;
+		}
+	}
+	return NULL;
+}
+
+void *productor_run(void *ser)
+{
+	server *serv = (server *)ser;
+	client_info client;
+	string msg;
+	data_pool::data_type data;
+	while(1){
+		if(serv->recv_msg(msg, client) < 0){
+			log_error("recv_msg error");
+			return (void*)-1;
+		}
+		data.first = client._id;
+		data.second = msg;
+
+		log_message(msg.c_str());
+
+		serv->_msg_queue.push(data);
+		serv->_online_users[client._id] = client;
+	}
+
+	return NULL;
+}
+
 
 #endif
