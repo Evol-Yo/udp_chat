@@ -21,6 +21,12 @@
 void *cosumer_run(void *ser);
 void *productor_run(void *ser);
 
+class msg_info {
+	private:
+		int		msg_len;
+		string	msg;
+};
+
 class server {
 	friend void *cosumer_run(void *ser);
 	friend void *productor_run(void *ser);

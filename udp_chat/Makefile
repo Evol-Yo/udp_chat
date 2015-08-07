@@ -9,6 +9,7 @@ SERVER_PATH=$(ROOT_PATH)/udp_server
 
 CC=g++
 CFLAGS=-g -Wall
+LIB= -lpthread -ljsoncpp
 LDFLAGS=#-static
 INCLUDE=-I$(CLIENT_PATH) -I$(COMM_PATH) -I$(DATA_POOL_PATH) \
 		-I$(LIB_PATH) -I$(LOG_PATH) -I$(SERVER_PATH)
@@ -25,9 +26,9 @@ SER_BIN=server
 all:$(CLI_BIN) $(SER_BIN)
 
 $(CLI_BIN):$(CLI_OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) -lpthread
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIB)
 $(SER_BIN):$(SER_OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) -lpthread
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIB)
 
 %.o:$(COMM_PATH)/%.cpp
 	$(CC) $(CFLAGS) -c $< $(INCLUDE)  
@@ -40,7 +41,19 @@ $(SER_BIN):$(SER_OBJ)
 
 
 clean:
-	rm -f *.o $(CLI_BIN) $(SER_BIN)
+	rm -rf *.o $(CLI_BIN) $(SER_BIN) output
+
+output:all
+.PHONY:output
+output:
+	mkdir -p output/server
+	mkdir -p output/client
+	cp -R plugin/server_ctl.sh outpout
+	cp -R server output/server
+	cp -R client output/client
+	cp -R conf 	 output/server
+	cp -R conf 	 output/client
+	
 
 
 
